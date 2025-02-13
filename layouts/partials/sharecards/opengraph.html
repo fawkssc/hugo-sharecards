@@ -42,4 +42,8 @@
 {{- end }}
 
 {{- /* Facebook Page Admin ID for Domain Insights */}}
-{{- with .Site.Social.facebook_admin }}<meta property="fb:admins" content="{{ . }}" />{{ end }}
+{{- if (ge (float (replaceRE "([0-9]+\\.[0-9]+).*" "${1}" hugo.Version)) 0.124) -}}
+{{- with .Site.Params.Social.facebook_admin }}<meta property="fb:admins" content="{{ . }}" />{{ end -}}
+{{- else -}}
+{{- with .Site.Social.facebook_admin }}<meta property="fb:admins" content="{{ . }}" />{{ end -}}
+{{- end -}}
