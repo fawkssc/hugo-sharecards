@@ -1,0 +1,57 @@
+{{- $siteOpenGraph := .Site.Params.opengraph | default dict -}}
+{{- $pageOpenGraph := .Page.Params.opengraph | default dict -}}
+
+{{- $title := false -}}
+{{- if .Page.IsHome -}}
+    {{- $title = $siteOpenGraph.title | default .Site.Title -}}
+{{- else -}}
+    {{- $title = $pageOpenGraph.title | default .Page.Title -}}
+    {{- if ne $title .Site.Title -}}
+        {{- $title = printf (($pageOpenGraph.titleFormat | default ($siteOpenGraph.titleFormat | default .Site.Params.titleFormat)) | default "%s | %s") .Page.Title .Site.Title -}}
+    {{- end -}}
+{{- end -}}
+
+{{- $description := false -}}
+{{- $description = ($siteOpenGraph.description | default .Site.Params.description) | default .Page.Description -}}
+{{- if .Page.IsPage -}}
+    {{- $description = ($pageOpenGraph.description | default .Page.Summary) | default $description -}}
+{{- end -}}
+
+{{- $image := false }}
+{{- $imageFilters := union (.ImageFilters | default  slice) (slice "*opengraph*" "*featured*" "{*cover*, *thumbnail*}") -}}
+{{- if .Page.IsPage -}}
+    {{- $resources := .Page.Resources.ByType "image" -}}
+    {{- with ($pageOpenGraph.image | default (index (.Page.Params.images | default slice) 0)) -}}
+        {{- with $resources.GetMatch . -}}
+            {{- $image = (dict "Type" "resource" "Resource" .) -}}
+        {{- else -}}
+            {{- $image = (dict "Type" "static" "Path" .) -}}
+        {{- end -}}
+    {{- else -}}
+        {{- range $imageFilters -}}
+            {{- with $resources.GetMatch . -}}
+                {{- $image = (dict "Type" "resource" "Resource" .) -}}
+                {{- break -}}
+            {{- end -}}
+        {{- end -}}
+    {{- end -}}
+{{- end -}}
+{{- if eq $image false -}}
+    {{- $resources := resources.ByType "image" -}}
+    {{- with ($siteOpenGraph.image | default (index (.Site.Params.images | default slice) 0)) -}}
+        {{- with $resources.GetMatch . -}}
+            {{- $image = (dict "Type" "resource" "Resource" .) -}}
+        {{- else -}}
+            {{- $image = (dict "Type" "static" "Path" .) -}}
+        {{- end -}}
+    {{- else -}}
+        {{- range $imageFilters -}}
+            {{- with $resources.GetMatch . -}}
+                {{- $image = (dict "Type" "resource" "Resource" .) -}}
+                {{- break -}}
+            {{- end -}}
+        {{- end -}}
+    {{- end -}}
+{{- end -}}
+
+{{ return (dict "Title" $title "Description" $description "Image" $image "Params" $pageOpenGraph.Params "SiteParams" $siteOpenGraph) }}
