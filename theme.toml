@@ -1,11 +1,11 @@
 name = "Hugo Sharecards"
 license = "MIT"
-licenselink = "https://github.com/jefawks3/hugo-sharecards/LICENSE"
+licenselink = "https://github.com/fawkssc/hugo-sharecards/LICENSE"
 description = "Updated image processing for share cards."
-homepage = "https://github.com/jefawks3/hugo-sharecards"
+homepage = "https://github.com/fawkssc/hugo-sharecards"
 tags = ["facebook", "opengraph", "twitter"]
 features = []
 
 [author]
-  name = "James Fawks"
-  homepage = "https://jfawks.com"
+  name = "Fawks Software Consulting"
+  homepage = "https://www.fawkssoftwareconsulting.com"

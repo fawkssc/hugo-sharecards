@@ -1,3 +1,3 @@
-module github.com/jefawks3/hugo-sharecards
+module github.com/fawkssc/hugo-sharecards
 
-go 1.17
+go 1.18
