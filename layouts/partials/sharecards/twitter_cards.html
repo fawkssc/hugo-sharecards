@@ -1,21 +1,57 @@
-{{- $opengraph := (partial "sharecards/params.html" (dict "Page" . "Site" site "ImageFilters" (slice "*twitter_card*"))) -}}
+{{- $defaultToSite := or .Params.opengraph.defaultToSite site.Params.opengraph.defaultToSite -}}
 
-<meta name="twitter:title" content="{{ $opengraph.Title }}"/>
-<meta name="twitter:description" content="{{ $opengraph.Description }}"/>
+{{- with or .Params.opengraph.twitter.title .Params.opengraph.title (and (not $defaultToSite) .Title) site.Params.opengraph.twitter.title site.Params.opengraph.title site.Title | plainify -}}
+    <meta property="twitter:title" content="{{ . }}" />
+{{- end -}}
+{{- with or .Params.opengraph.twitter.description .Params.opengraph.description (and (not $defaultToSite) (or .Description .Summary)) site.Params.opengraph.twitter.description site.Params.opengraph.description site.Params.description | plainify | htmlUnescape -}}
+    <meta property="twitter:description" content="{{ . }}" />
+{{- end -}}
+
+{{- with $config := or .Params.opengraph.twitter.resource .Params.opengraph.resource -}}
+    {{- with $resource := $.Resources.Get $config.src -}}
+        {{- with $config.process }}{{ range cond (reflect.IsSlice .) . (slice .) }}{{ $resource = $resource.Process . }}{{ end }}{{ end -}}
+        {{- with $config.fingerprint }}{{ $resource = $resource | fingerprint }}{{ end -}}
+        <meta name="twitter:card" content="summary_large_image"/>
+        <meta property="twitter:image" content="{{ $resource.Permalink }}"/>
+        <meta property="twitter:image:width" content="{{ $resource.Width }}"/>
+        <meta property="twitter:image:height" content="{{ $resource.Height }}"/>
+    {{- end -}}
+{{- else with or .Params.opengraph.twitter.image .Params.opengraph.image -}}
+    {{- with $.Resources.Get . -}}
+        <meta name="twitter:card" content="summary_large_image"/>
+        <meta property="twitter:image" content="{{ (. | fingerprint).Permalink }}"/>
+        <meta property="twitter:image:width" content="{{ .Width }}"/>
+        <meta property="twitter:image:height" content="{{ .Height }}"/>
+    {{- end -}}
+{{- else with or (.Resources.Get "twitter") (.Resources.Get "opengraph") (.Resources.Get "featured") (.Resources.GetMatch "{twitter,opengraph,featured,cover,thumbnail}.{webp,png,jpeg,jpg}") -}}
+    <meta name="twitter:card" content="summary_large_image"/>
+    <meta property="twitter:image" content="{{ (. | fingerprint).Permalink }}"/>
+    <meta property="twitter:image:width" content="{{ .Width }}"/>
+    <meta property="twitter:image:height" content="{{ .Height }}"/>
+{{- else with .Params.images -}}
+    <meta name="twitter:card" content="summary_large_image"/>
+    <meta property="twitter:image" content="{{ index . 0 | absURL }}"/>
+{{- else with $config := or site.Params.opengraph.twitter.resource site.Params.opengraph.resource -}}
+    {{- with $resource := resources.Get $config.src -}}
+        {{- with $config.process }}{{ range cond (reflect.IsSlice .) . (slice .) }}{{ $resource = $resource.Process . }}{{ end }}{{ end -}}
+        {{- with $config.fingerprint }}{{ $resource = $resource | fingerprint }}{{ end -}}
+        <meta name="twitter:card" content="summary_large_image"/>
+        <meta property="twitter:image" content="{{ $resource.Permalink }}"/>
+        <meta property="twitter:image:width" content="{{ $resource.Width }}"/>
+        <meta property="twitter:image:height" content="{{ $resource.Height }}"/>
+    {{- end -}}
+{{- else with or (resources.Get site.Params.opengraph.image) (resources.GetMatch "{twitter,featured,cover,thumbnail}.{webp,png,jpeg,jpg}") -}}
+    <meta name="twitter:card" content="summary_large_image"/>
+    <meta property="twitter:image" content="{{ (. | fingerprint).Permalink }}"/>
+    <meta property="twitter:image:width" content="{{ .Width }}"/>
+    <meta property="twitter:image:height" content="{{ .Height }}"/>
+{{- else -}}
+    <meta name="twitter:card" content="summary"/>
+{{- end -}}
+
+{{- /* Twitter Site */ -}}
 {{- if (ge (float (replaceRE "([0-9]+\\.[0-9]+).*" "${1}" hugo.Version)) 0.124) -}}
-{{ with .Site.Params.Social.twitter }}<meta name="twitter:site" content="@{{ . }}"/>{{ end -}}
+    {{ with .Site.Params.Social.twitter }}<meta name="twitter:site" content="@{{ . }}"/>{{ end -}}
 {{- else -}}
-{{ with .Site.Social.twitter }}<meta name="twitter:site" content="@{{ . }}"/>{{ end -}}
-{{- end -}}
-{{- with $opengraph.Image -}}
-<meta name="twitter:card" content="summary_large_image"/>
-{{- if eq .Type "resource" -}}
-<meta name="twitter:image" content="{{ (.Resource | fingerprint).Permalink }}"/>
-<meta property="twitter:image:width" content="{{ .Resource.Width }}"/>
-<meta property="twitter:image:height" content="{{ .Resource.Height }}"/>
-{{- else -}}
-<meta name="twitter:image" content="{{ .Path | absURL }}"/>
-{{- end -}}
-{{- else -}}
-<meta name="twitter:card" content="summary"/>
+    {{ with .Site.Social.twitter }}<meta name="twitter:site" content="@{{ . }}"/>{{ end -}}
 {{- end -}}

@@ -1,33 +1,89 @@
-{{- $opengraph := (partial "sharecards/params.html" (dict "Page" . "Site" site)) -}}
+{{- $defaultToSite := or .Params.opengraph.defaultToSite site.Params.opengraph.defaultToSite -}}
 
-<meta property="og:title" content="{{ $opengraph.Title }}" />
-<meta property="og:description" content="{{ $opengraph.Description }}" />
-<meta property="og:type" content="{{ if .IsPage }}article{{ else }}website{{ end }}" />
+{{- with or site.Title site.Params.title | plainify }}
+    <meta property="og:site_name" content="{{ . }}">
+{{- end }}
+
 <meta property="og:url" content="{{ .Permalink }}" />
 
-{{- with $opengraph.Image -}}
-{{- if eq .Type "resource" -}}
-<meta property="og:image" content="{{ (.Resource | fingerprint).Permalink }}"/>
-<meta property="og:image:width" content="{{ .Resource.Width }}"/>
-<meta property="og:image:height" content="{{ .Resource.Height }}"/>
+{{- with or .Params.opengraph.title (and (not $defaultToSite) .Title) site.Params.opengraph.title site.Title | plainify -}}
+    <meta property="og:title" content="{{ . }}" />
+{{- end -}}
+{{- with or .Params.opengraph.description (and (not $defaultToSite) (or .Description .Summary)) site.Params.opengraph.description site.Params.description | plainify | htmlUnescape -}}
+    <meta property="og:description" content="{{ . }}" />
+{{- end -}}
+
+{{- with or .Page.Language.LanguageCode site.Language.LanguageCode -}}
+    <meta property="og:locale" content="{{ replace . `-` `_` }}">
+{{- end -}}
+
+{{- if .IsPage -}}
+    <meta property="og:type" content="article" />
+    {{- $iso8601 := "2006-01-02T15:04:05-07:00" -}}
+    <meta property="article:section" content="{{ .Section }}" />
+    {{- with .PublishDate -}}
+        <meta property="article:published_time" {{ .Format $iso8601 | printf "content=%q" | safeHTMLAttr }} />
+    {{- end -}}
+    {{- with .Lastmod -}}
+        <meta property="article:modified_time" {{ .Format $iso8601 | printf "content=%q" | safeHTMLAttr }} />
+    {{- end -}}
 {{- else -}}
-<meta property="og:image" content="{{ .Path | absURL }}"/>
-{{- end -}}
-{{- end -}}
-
-{{- if .IsPage }}
-{{- $iso8601 := "2006-01-02T15:04:05-07:00" -}}
-<meta property="article:section" content="{{ .Section }}" />
-{{ with .PublishDate }}<meta property="article:published_time" {{ .Format $iso8601 | printf "content=%q" | safeHTMLAttr }} />{{ end }}
-{{ with .Lastmod }}<meta property="article:modified_time" {{ .Format $iso8601 | printf "content=%q" | safeHTMLAttr }} />{{ end }}
+    <meta property="og:type" content="website" />
 {{- end -}}
 
-{{- with .Params.audio }}<meta property="og:audio" content="{{ . }}" />{{ end }}
-{{- with .Params.locale }}<meta property="og:locale" content="{{ . }}" />{{ end }}
-{{- with .Site.Params.title }}<meta property="og:site_name" content="{{ . }}" />{{ end }}
-{{- with .Params.videos }}{{- range . }}
-<meta property="og:video" content="{{ . | absURL }}" />
-{{ end }}{{ end }}
+{{- with $config := .Params.opengraph.resource -}}
+    {{- with $resource := $.Resources.GetMatch .src -}}
+        {{- with $config.process }}{{ range cond (reflect.IsSlice .) . (slice .) }}{{ $resource = $resource.Process . }}{{ end }}{{ end -}}
+        {{- with $config.fingerprint }}{{ $resource = $resource | fingerprint }}{{ end -}}
+        <meta property="og:image" content="{{ $resource.Permalink }}"/>
+        <meta property="og:image:width" content="{{ $resource.Width }}"/>
+        <meta property="og:image:height" content="{{ $resource.Height }}"/>
+    {{- end -}}
+{{- else with .Params.opengraph.image -}}
+    {{- with $.Resources.Get . -}}
+        <meta property="og:image" content="{{ (. | fingerprint).Permalink }}"/>
+        <meta property="og:image:width" content="{{ .Width }}"/>
+        <meta property="og:image:height" content="{{ .Height }}"/>
+    {{- end -}}
+{{- else with or (.Resources.Get "opengraph") (.Resources.Get "featured") (.Resources.GetMatch "{opengraph,featured,cover,thumbnail}.{webp,png,jpeg,jpg}") -}}
+    <meta property="og:image" content="{{ (. | fingerprint).Permalink }}"/>
+    <meta property="og:image:width" content="{{ .Width }}"/>
+    <meta property="og:image:height" content="{{ .Height }}"/>
+{{- else with .Params.images -}}
+    <meta property="og:image" content="{{ index . 0 | absURL }}"/>
+{{- else with $config := site.Params.opengraph.resource -}}
+    {{- with $resource := resources.Get $config.src -}}
+        {{- with $config.process }}{{ range cond (reflect.IsSlice .) . (slice .) }}{{ $resource = $resource.Process . }}{{ end }}{{ end -}}
+        {{- with $config.fingerprint }}{{ $resource = $resource | fingerprint }}{{ end -}}
+        <meta property="og:image" content="{{ $resource.Permalink }}"/>
+        <meta property="og:image:width" content="{{ $resource.Width }}"/>
+        <meta property="og:image:height" content="{{ $resource.Height }}"/>
+    {{- end -}}
+{{- else with or (resources.Get site.Params.opengraph.image) (resources.GetMatch "{featured,cover,thumbnail}.{webp,png,jpeg,jpg}") -}}
+    <meta property="og:image" content="{{ (. | fingerprint).Permalink }}"/>
+    <meta property="og:image:width" content="{{ .Width }}"/>
+    <meta property="og:image:height" content="{{ .Height }}"/>
+{{- end -}}
+
+{{- with .Params.audio -}}
+    {{- range . | first 6  -}}
+        <meta property="og:audio" content="{{ . | absURL }}">
+    {{- end -}}
+{{- end -}}
+
+{{- with .Params.videos -}}
+    {{- range . | first 6 -}}
+        <meta property="og:video" content="{{ . | absURL }}">
+    {{- end -}}
+{{- end }}
+
+{{- range .GetTerms "series" -}}
+    {{- range .Pages | first 7 }}
+        {{- if ne $ . }}
+            <meta property="og:see_also" content="{{ .Permalink }}">
+        {{- end -}}
+    {{- end -}}
+{{- end }}
 
 {{- /* If it is part of a series, link to related articles */}}
 {{- $permalink := .Permalink }}
